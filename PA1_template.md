@@ -1,16 +1,45 @@
----
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
----
+# Reproducible Research: Peer Assessment 1
 
 ## Loading and preprocessing the data
-```{r echo=TRUE}
+
+```r
 library(downloader)
 library(dplyr)
-library(lubridate)
+```
 
+```
+## 
+## Attaching package: 'dplyr'
+```
+
+```
+## The following objects are masked from 'package:stats':
+## 
+##     filter, lag
+```
+
+```
+## The following objects are masked from 'package:base':
+## 
+##     intersect, setdiff, setequal, union
+```
+
+```r
+library(lubridate)
+```
+
+```
+## 
+## Attaching package: 'lubridate'
+```
+
+```
+## The following object is masked from 'package:base':
+## 
+##     date
+```
+
+```r
 localFile <- 'activity.csv'
 localArchive <- 'activity.zip'
 remoteFile <- 'https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip'
@@ -36,8 +65,8 @@ dataSet <- mutate(dataRaw, date = ymd(date))
 ```
 
 ## What is mean total number of steps taken per day?
-```{r echo=TRUE, fig.height = 3, fig.width = 6 }
 
+```r
 # Group data by day for summarizing
 dataGrouped <- group_by(dataSet, date)
 
@@ -50,20 +79,24 @@ hist(dataTotal$totalSteps,
      xlab = 'Number of steps',
      col = 'grey'
      )
+```
 
+![](PA1_Template_files/figure-html/unnamed-chunk-2-1.png)<!-- -->
+
+```r
 # Calculate daily stats
 dataTotal2 <- summarise(dataTotal, 
                         meanPerDay = mean(totalSteps, na.rm =TRUE),
                         medianPerDay = median(totalSteps, na.rm = TRUE)
                         )
-
 ```
 
-- Daily mean of number of steps taken: `r as.integer(dataTotal2$meanPerDay)`
-- Daily median of number of steps taken: `r as.integer(dataTotal2$medianPerDay)`
+- Daily mean of number of steps taken: 10766
+- Daily median of number of steps taken: 10765
 
 ## What is the average daily activity pattern?
-```{r echo=TRUE, fig.height = 4, fig.width = 6}
+
+```r
 # Group data by interval
 dataGrouped <- group_by(dataSet, interval)
 
@@ -78,19 +111,23 @@ plot(x = dataTotal$interval,
      xlab = 'Interval',
      ylab = 'Number of steps',
      main = 'Average number of steps in specified intervals')
+```
 
+![](PA1_Template_files/figure-html/unnamed-chunk-3-1.png)<!-- -->
+
+```r
 # Determine interval with highest average
 maxInd <- dataTotal[which.max(dataTotal$meanPerInterval), c('interval')]
 maxVal <- max(dataTotal$meanPerInterval)
-
 ```
 
-The interval that contains the highest average number of steps is `r maxInd`, the actual average number of steps for that interval is `r maxVal`
+The interval that contains the highest average number of steps is 835, the actual average number of steps for that interval is 206.1698113
 
 ## Imputing missing values
-A total of `r sum(is.na(dataSet$steps))` of NA values occur in our dataset.
+A total of 2304 of NA values occur in our dataset.
 
-```{r echo=TRUE, fig.height = 3, fig.width = 6}
+
+```r
 # Create a set with just NA values
 # We want to fill the NA values with the median for that specific interval of the 2 days before and 2 days after the NA value
 
@@ -124,21 +161,25 @@ hist(dataTotal$totalSteps,
      xlab = 'Number of steps',
      col = 'grey'
      )
+```
 
+![](PA1_Template_files/figure-html/unnamed-chunk-4-1.png)<!-- -->
+
+```r
 # Calculate daily stats
 dataTotal2 <- summarise(dataTotal, 
                         meanPerDay = mean(totalSteps, na.rm = TRUE),
                         medianPerDay = median(totalSteps, na.rm = TRUE)
                         )
-
 ```
 
-- Daily mean of number of steps taken: `r as.integer(dataTotal2$meanPerDay)`
-- Daily median of number of steps taken: `r as.integer(dataTotal2$medianPerDay)`
+- Daily mean of number of steps taken: 10012
+- Daily median of number of steps taken: 10395
 
 ## Are there differences in activity patterns between weekdays and weekends?
 
-```{r echo=TRUE, fig.height = 6, fig.width = 8}
+
+```r
 library(lattice)
 
 dataSet3 <- mutate(dataSet,
@@ -155,6 +196,7 @@ xyplot(dataGrouped$meanSteps ~ dataGrouped$interval | dataGrouped$isWeekend,
        layout = c(1, 2),
        xlab = 'Interval',
        ylab = 'Number of steps')
-
 ```
+
+![](PA1_Template_files/figure-html/unnamed-chunk-5-1.png)<!-- -->
 
