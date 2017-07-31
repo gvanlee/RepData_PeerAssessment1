@@ -5,21 +5,154 @@ output:
     keep_md: true
 ---
 
-
 ## Loading and preprocessing the data
+```{r echo=TRUE}
+library(downloader)
+library(dplyr)
+library(lubridate)
 
+localFile <- 'activity.csv'
+localArchive <- 'activity.zip'
+remoteFile <- 'https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip'
 
+# If the file doesn't exist locally yet, download and unzip it
+if ( !file.exists(localArchive)) {
+  download(remoteFile,
+           destfile = localArchive)
+}
+
+# Do we need to unpack the archive?
+if ( !file.exists(localFile)) {
+  unzip(localArchive)
+}
+
+# Data ready, read it into a tibble
+dataRaw <- tbl_df(read.csv(file = localFile,
+                           sep = ',', 
+                           stringsAsFactors = FALSE))
+
+# Convert date field to actual date
+dataSet <- mutate(dataRaw, date = ymd(date))
+```
 
 ## What is mean total number of steps taken per day?
+```{r echo=TRUE, fig.height = 3, fig.width = 6 }
 
+# Group data by day for summarizing
+dataGrouped <- group_by(dataSet, date)
 
+# Calculate daily totals for histogram
+dataTotal <- summarise(dataGrouped, 
+                       totalSteps = sum(steps)
+                       )
+hist(dataTotal$totalSteps,
+     main = 'Total number of steps per day',
+     xlab = 'Number of steps',
+     col = 'grey'
+     )
+
+# Calculate daily stats
+dataTotal2 <- summarise(dataTotal, 
+                        meanPerDay = mean(totalSteps, na.rm =TRUE),
+                        medianPerDay = median(totalSteps, na.rm = TRUE)
+                        )
+
+```
+
+- Daily mean of number of steps taken: `r as.integer(dataTotal2$meanPerDay)`
+- Daily median of number of steps taken: `r as.integer(dataTotal2$medianPerDay)`
 
 ## What is the average daily activity pattern?
+```{r echo=TRUE, fig.height = 4, fig.width = 6}
+# Group data by interval
+dataGrouped <- group_by(dataSet, interval)
 
+# Calculate mean
+dataTotal <- summarise(dataGrouped, meanPerInterval = mean(steps, na.rm = TRUE))
 
+# Construct plot
+plot(x = dataTotal$interval,
+     y = dataTotal$meanPerInterval,
+     type = 'l',
+     col = 'grey',
+     xlab = 'Interval',
+     ylab = 'Number of steps',
+     main = 'Average number of steps in specified intervals')
+
+# Determine interval with highest average
+maxInd <- dataTotal[which.max(dataTotal$meanPerInterval), c('interval')]
+maxVal <- max(dataTotal$meanPerInterval)
+
+```
+
+The interval that contains the highest average number of steps is `r maxInd`, the actual average number of steps for that interval is `r maxVal`
 
 ## Imputing missing values
+A total of `r sum(is.na(dataSet$steps))` of NA values occur in our dataset.
 
+```{r echo=TRUE, fig.height = 3, fig.width = 6}
+# Create a set with just NA values
+# We want to fill the NA values with the median for that specific interval of the 2 days before and 2 days after the NA value
 
+dataSet2 <- dataSet
+
+for (i in 1:nrow(dataSet2)) {
+  rowObj <- dataSet2[i, ]
+  
+  if (is.na(rowObj$steps)) {
+      subSet <- 
+          filter(dataSet, 
+                 date >= (rowObj$date - days(2)) 
+                 & date <= (rowObj$date + days(2)) 
+                 & interval == rowObj$interval)
+
+      dataSet2[i, ]$steps = round(median(subSet$steps, na.rm = TRUE), 0)
+    }
+}
+
+# Recalculate steps per day and derived variables
+
+# Group data by day for summarizing
+dataGrouped <- group_by(dataSet2, date)
+
+# Calculate daily totals for histogram
+dataTotal <- summarise(dataGrouped, 
+                       totalSteps = sum(steps)
+                       )
+hist(dataTotal$totalSteps,
+     main = 'Total number of steps per day',
+     xlab = 'Number of steps',
+     col = 'grey'
+     )
+
+# Calculate daily stats
+dataTotal2 <- summarise(dataTotal, 
+                        meanPerDay = mean(totalSteps, na.rm = TRUE),
+                        medianPerDay = median(totalSteps, na.rm = TRUE)
+                        )
+
+```
+
+- Daily mean of number of steps taken: `r as.integer(dataTotal2$meanPerDay)`
+- Daily median of number of steps taken: `r as.integer(dataTotal2$medianPerDay)`
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+```{r echo=TRUE, fig.height = 6, fig.width = 8}
+dataSet3 <- mutate(dataSet,
+                   isWeekend = (weekdays(date, abbreviate = TRUE) == 'za') | (weekdays(date, abbreviate = TRUE) == 'zo'))
+
+dataGrouped <- group_by(dataSet3, isWeekend, interval)
+dataGrouped <- summarise(dataGrouped, meanSteps = mean(steps, na.rm = TRUE))
+
+dataGrouped$isWeekend <- factor(dataGrouped$isWeekend)
+levels(dataGrouped$isWeekend) <- c('Weekdays', 'Weekend')
+
+xyplot(dataGrouped$meanSteps ~ dataGrouped$interval | dataGrouped$isWeekend,
+       type = 'l',
+       layout = c(1, 2),
+       xlab = 'Interval',
+       ylab = 'Number of teps')
+
+```
+
